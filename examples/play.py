@@ -4,6 +4,7 @@ import argparse
 import pystk
 from time import time
 import numpy as np
+import _pickle as pickle
 from . import gui
 
 
@@ -58,6 +59,7 @@ if __name__ == "__main__":
 
     uis = [gui.UI([gui.VT[x] for x in args.visualization]) for i in range(args.num_player)]
     save_depth = "DEPTH" in args.visualization
+    save_labels = "SEMANTIC" in args.visualization or "INSTANCE" in args.visualization
 
     state = pystk.WorldState()
     t0 = time()
@@ -77,12 +79,18 @@ if __name__ == "__main__":
         if args.save_dir:
             image = np.array(race.render_data[0].image)
             action = action_dict(uis[0].current_action)
+            player_info = state.karts[0]
 
             Image.fromarray(image).save(args.save_dir / ('image_%06d.png' % n))
             (args.save_dir / ('action_%06d.txt' % n)).write_text(str(action))
+            with open(args.save_dir / ('player_info_%06d' % n), 'wb') as output:
+                pickle.dump(player_info, output, -1)
             if save_depth:
                 depth = np.array(race.render_data[0].depth).astype('uint8')
                 np.save(args.save_dir / ('depth_%06d' % n), depth)
+            if save_labels:
+                label = np.array(race.render_data[0].instance) #& 0xffffff
+                np.save(args.save_dir / ('label_%06d' % n), label)
 
         # Make sure we play in real time
         n += 1
