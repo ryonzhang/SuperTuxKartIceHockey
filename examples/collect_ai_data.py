@@ -1,3 +1,6 @@
+# Records actions, positions of puck and all players in world and screen space for 4 ai players
+# use argument --display to show on screen, --steps to specify number of frames to save
+
 from pathlib import Path
 from PIL import Image
 import argparse
@@ -88,7 +91,7 @@ if __name__ == "__main__":
     state = pystk.WorldState()
     t0 = time()
     n = 0
-    while (n<args.steps) and (all(ui.visible for ui in uis) or (not args.display)):
+    while (n<args.steps) and ((not args.display) or all(ui.visible for ui in uis)):
         if (not args.display) or (not all(ui.pause for ui in uis)):
             #race.step(uis[0].current_action)
             race.step()
@@ -110,6 +113,11 @@ if __name__ == "__main__":
             pos_kart_1 = to_numpy(state.karts[1].location)
             pos_kart_2 = to_numpy(state.karts[2].location)
             pos_kart_3 = to_numpy(state.karts[3].location)
+
+            np.savez(args.save_dir / (uid + '_' + 'world' + '_pos_ball_%06d' % n), pos_ball)
+            np.savez(args.save_dir / (uid + '_' + 'world' + '_pos_team0_%06d' % n), pos_kart_0, pos_kart_2)
+            np.savez(args.save_dir / (uid + '_' + 'world' + '_pos_team1_%06d' % n), pos_kart_1, pos_kart_3)
+
 
             # save positions, actions for all players
             for i in range(len(race.render_data)):
