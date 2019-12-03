@@ -30,6 +30,7 @@ import _pickle as pickle
 import random
 import uuid
 import os
+import sys
 from . import gui
 
 # ripped from hw6
@@ -183,6 +184,12 @@ if __name__ == "__main__":
 
         # Make sure we play in real time
         n += 1
+        
+        sys.stdout.write("frame " + str(n))
+        sys.stdout.flush()
+        sys.stdout.write('\r')
+        sys.stdout.flush()
+
         if(args.display):
             delta_d = n * config.step_size - (time() - t0)
             if delta_d > 0:
