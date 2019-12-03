@@ -1,6 +1,25 @@
 # Records actions, positions of puck and all players in world and screen space for 4 ai players
 # use argument --display to show on screen, --steps to specify number of frames to save
 
+# sets all players to random karts so network can recognize all of them (maybe run this multiple times so it can see all of them once)
+
+# saves data from player i in drive_data/[player nr]
+# files:
+# .png: game video output
+# .npz: numpy arrays of positions of team 0,1 players and ball in separate files;
+#   world positions in world directory (position on map) and on-screen positions of the four players in respective dirs
+# .txt: last action player took
+# rest: dump of player state, depth, segmentation map
+
+# goal: use this to collect data
+# -create net to predict onscreen positions of karts, ball from game video output
+# -calculate world map from those predictions (code for that can be found on piazza (https://piazza.com/class/jzsr2l6kqaa5xi?cid=395))
+#    combine sight of both players into map, use some clever logic to also predict objects that neither of the players can see
+# - create net that can take actions from map (imitate ai first (this script saves player actions and all relevant positions), gradient free optimization later)
+#    note for gradient free: distance of puck to goal could be a good reward function (e.g. reward = 1/(distance+1))
+#    note for second net in general: map coordinates need to be rotated by 180 degrees (not flipped, else steering left/right are also flipped) depending on which team we're on
+#       e.g. if our id is 1, we have to regard team 1 as our own (-> maybe flip heatmaps or something) and aim for the other goal, else we would have to train a red agent and a blue agent
+
 from pathlib import Path
 from PIL import Image
 import argparse
@@ -10,6 +29,7 @@ import numpy as np
 import _pickle as pickle
 import random
 import uuid
+import os
 from . import gui
 
 # ripped from hw6
@@ -39,7 +59,7 @@ if __name__ == "__main__":
     parser.add_argument('-v', '--visualization', type=str, choices=list(gui.VT.__members__), nargs='+',
                         default=['IMAGE'])
     parser.add_argument('--verbose', action='store_true')
-    parser.add_argument('--save_dir', type=Path, required=False)
+    parser.add_argument('--save_dir', type=Path, default = 'drive_data')
     parser.add_argument('--display', action='store_true')
     parser.add_argument('--steps', type=int, default=10000)
 
@@ -47,6 +67,17 @@ if __name__ == "__main__":
 
     if args.save_dir:
         args.save_dir.mkdir(parents=True, exist_ok=True)
+        # create dirs
+        if not os.path.exists(args.save_dir / 'world'):
+            os.makedirs(args.save_dir / 'world')
+        if not os.path.exists(args.save_dir / '0'):
+            os.makedirs(args.save_dir / '0')
+        if not os.path.exists(args.save_dir / '1'):
+            os.makedirs(args.save_dir / '1')
+        if not os.path.exists(args.save_dir / '2'):
+            os.makedirs(args.save_dir / '2')
+        if not os.path.exists(args.save_dir / '3'):
+            os.makedirs(args.save_dir / '3')
 
     config = pystk.GraphicsConfig.hd()
     config.screen_width = 400
@@ -114,9 +145,9 @@ if __name__ == "__main__":
             pos_kart_2 = to_numpy(state.karts[2].location)
             pos_kart_3 = to_numpy(state.karts[3].location)
 
-            np.savez(args.save_dir / (uid + '_' + 'world' + '_pos_ball_%06d' % n), pos_ball)
-            np.savez(args.save_dir / (uid + '_' + 'world' + '_pos_team0_%06d' % n), pos_kart_0, pos_kart_2)
-            np.savez(args.save_dir / (uid + '_' + 'world' + '_pos_team1_%06d' % n), pos_kart_1, pos_kart_3)
+            np.savez(args.save_dir / 'world' / (uid + '_pos_ball_%06d' % n), pos_ball)
+            np.savez(args.save_dir / 'world' / (uid + '_pos_team0_%06d' % n), pos_kart_0, pos_kart_2)
+            np.savez(args.save_dir / 'world' / (uid + '_pos_team1_%06d' % n), pos_kart_1, pos_kart_3)
 
 
             # save positions, actions for all players
@@ -135,20 +166,20 @@ if __name__ == "__main__":
                 local_kart_3 = to_image(pos_kart_3, proj, view)
 
                 # save to files
-                np.savez(args.save_dir / (uid + '_' + str(i) + '_pos_ball_%06d' % n), local_ball)
-                np.savez(args.save_dir / (uid + '_' + str(i) + '_pos_team0_%06d' % n), local_kart_0, local_kart_2)
-                np.savez(args.save_dir / (uid + '_' + str(i) + '_pos_team1_%06d' % n), local_kart_1, local_kart_3)
+                np.savez(args.save_dir / str(i) / (uid + '_pos_ball_%06d' % n), local_ball)
+                np.savez(args.save_dir / str(i) / (uid + '_pos_team0_%06d' % n), local_kart_0, local_kart_2)
+                np.savez(args.save_dir / str(i) / (uid + '_pos_team1_%06d' % n), local_kart_1, local_kart_3)
 
-                Image.fromarray(image).save(args.save_dir / (uid + '_' + str(i) + '_image_%06d.png' % n))
-                (args.save_dir / (uid + '_' + str(i) + '_action_%06d.txt' % n)).write_text(str(action))
-                with open(args.save_dir / (uid + '_' + str(i) + '_player_info_%06d' % n), 'wb') as output:
+                Image.fromarray(image).save(args.save_dir / str(i) / (uid + '_image_%06d.png' % n))
+                (args.save_dir / str(i) / (uid + '_action_%06d.txt' % n)).write_text(str(action))
+                with open(args.save_dir / str(i) / (uid + '_player_info_%06d' % n), 'wb') as output:
                     pickle.dump(player_info, output, -1)
                 if save_depth:
-                    depth = np.array(race.render_data[0].depth).astype('uint8')
-                    np.save(args.save_dir / (uid + '_' + str(i) + '_depth_%06d' % n), depth)
+                    depth = np.array(race.render_data[i].depth).astype('uint8')
+                    np.save(args.save_dir / str(i) / (uid + '_depth_%06d' % n), depth)
                 if save_labels:
-                    label = np.array(race.render_data[0].instance) #& 0xffffff
-                    np.save(args.save_dir / (uid + '_' + str(i) + '_label_%06d' % n), label)
+                    label = np.array(race.render_data[i].instance) #& 0xffffff
+                    np.save(args.save_dir / str(i) / (uid + '_label_%06d' % n), label)
 
         # Make sure we play in real time
         n += 1
