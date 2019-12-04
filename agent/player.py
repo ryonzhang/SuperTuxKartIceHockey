@@ -1,6 +1,6 @@
 import numpy as np
-
-
+from .models import Detector
+from .controller import control1
 class HockeyPlayer:
     """
        Your ice hockey player. You may do whatever you want here. There are three rules:
@@ -15,13 +15,16 @@ class HockeyPlayer:
        You may request to play with a different kart.
        Call `python3 -c "import pystk; pystk.init(pystk.GraphicsConfig.ld()); print(pystk.list_karts())"` to see all values.
     """
-    kart = ""
+    kart = "wilber"
     
     def __init__(self, player_id = 0):
         """
         Set up a soccer player.
         The player_id starts at 0 and increases by one for each player added. You can use the player id to figure out your team (player_id % 2), or assign different roles to different agents.
         """
+        self.team = player_id % 2
+        self.model = Detector.load_model("det.th")
+        self.player_id = player_id//2
         pass
         
     def act(self, image, player_info):
@@ -35,6 +38,14 @@ class HockeyPlayer:
         """
         Your code here.
         """
+        
+        
+        if self.player_id == 0: # Should be the goalie TODO:Figure out if the goalie id should be 0 or 1
+            is_puck_onscreen, puck_location_onscreen = self.model(image) # We might want to pass in player_info
+            action = control1(action, is_puck_onscreen, puck_location_onscreen, self.team, player_info)
+        else: # Attacker(s), only one attacker for 2v2
+            is_puck_onscreen, puck_location_onscreen = self.model(image) # We might want to pass in player_info
+            action = control1(action, is_puck_onscreen, puck_location_onscreen, self.team, player_info)
 
         return action
 
