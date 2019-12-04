@@ -1,15 +1,15 @@
-import pystk
 import numpy as np
 import torch
 
+class Controller1:
+    def __init__(self, team):
+        """
+        :param team: A 0 or 1 representing which team we are on
+        """
+        self.team = team
+        self.team_orientaion_multiplier = -2*(team%2)+1
 
+    
+    def act(self, action, player_info ,puck_location_onscreen=None):
 
-def control1(action, is_puck_onscreen, puck_location_onscreen, team, player_info):
-    """
-    Set the Action for the low-level controller
-    :param aim_point: Aim point, in local coordinate frame
-    :param current_vel: Current velocity of the kart
-    :return: a pystk.Action (set acceleration, brake, steer, drift)
-    """
-
-    return action
+        return action
