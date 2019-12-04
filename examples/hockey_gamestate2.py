@@ -28,8 +28,8 @@ def get_vector_from_this_to_that(me, obj, normalize=True):
 
 if __name__ == "__main__":
     config = pystk.GraphicsConfig.hd()
-    config.screen_width = 128
-    config.screen_height = 96
+    config.screen_width = 400
+    config.screen_height = 300
 
     pystk.init(config)
 
@@ -40,9 +40,9 @@ if __name__ == "__main__":
     config.num_kart = 2
     config.players[0].kart = "wilber"
     config.players[0].controller = pystk.PlayerConfig.Controller.PLAYER_CONTROL
-    config.players[0].team = 1
+    config.players[0].team = 0
     config.players.append(
-            pystk.PlayerConfig("", pystk.PlayerConfig.Controller.AI_CONTROL, 0))
+            pystk.PlayerConfig("", pystk.PlayerConfig.Controller.AI_CONTROL, 1))
 
     race = pystk.Race(config)
     race.start()
@@ -106,7 +106,7 @@ if __name__ == "__main__":
 
         turn_mag = abs(1 - np.dot(ori_me, ori_to_item))
         if turn_mag > 1e-25:
-            uis[0].current_action.steer = np.sign(np.cross(ori_to_item, ori_me))*turn_mag*500
+            uis[0].current_action.steer = np.sign(np.cross(ori_to_item, ori_me))*turn_mag*5000
 
         # Live plotting. Sorry it's ugly.
         ax.clear()
