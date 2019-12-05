@@ -85,8 +85,9 @@ if __name__ == "__main__":
     config.screen_height = 300
     pystk.init(config)
 
+    # high possibility of wilber on opposite team
     possible_karts = ['tux', 'gnu', 'nolok', 'sara', 'adiumy', 'konqi', 'kiki', 'beastie',
-        'amanda', 'emule', 'suzanne', 'gavroche', 'hexley', 'xue', 'pidgin', 'puffy', 'wilber']
+        'amanda', 'emule', 'suzanne', 'gavroche', 'hexley', 'xue', 'pidgin', 'puffy', 'wilber', 'wilber', 'wilber', 'wilber', 'wilber', 'wilber', 'wilber', 'wilber', 'wilber']
 
     config = pystk.RaceConfig()
     config.num_kart = 4
@@ -103,7 +104,10 @@ if __name__ == "__main__":
 
 
     for p in config.players:
-        p.kart = random.choice(possible_karts)
+        if((p.team) % 2 == 1):
+            p.kart = random.choice(possible_karts)
+        else:
+            p.kart = 'wilber'
 
     if args.track is not None:
         config.track = args.track
@@ -146,9 +150,9 @@ if __name__ == "__main__":
             pos_kart_2 = to_numpy(state.karts[2].location)
             pos_kart_3 = to_numpy(state.karts[3].location)
 
-            np.savez(args.save_dir / 'world' / (uid + '_pos_ball_%06d' % n), pos_ball)
-            np.savez(args.save_dir / 'world' / (uid + '_pos_team0_%06d' % n), pos_kart_0, pos_kart_2)
-            np.savez(args.save_dir / 'world' / (uid + '_pos_team1_%06d' % n), pos_kart_1, pos_kart_3)
+            np.savez(args.save_dir / 'world' / (uid + '_%06d_pos_ball' % n), pos_ball)
+            np.savez(args.save_dir / 'world' / (uid + '_%06d_pos_team0' % n), pos_kart_0, pos_kart_2)
+            np.savez(args.save_dir / 'world' / (uid + '_%06d_pos_team1' % n), pos_kart_1, pos_kart_3)
 
 
             # save positions, actions for all players
@@ -167,24 +171,24 @@ if __name__ == "__main__":
                 local_kart_3 = to_image(pos_kart_3, proj, view)
 
                 # save to files
-                np.savez(args.save_dir / str(i) / (uid + '_pos_ball_%06d' % n), local_ball)
-                np.savez(args.save_dir / str(i) / (uid + '_pos_team0_%06d' % n), local_kart_0, local_kart_2)
-                np.savez(args.save_dir / str(i) / (uid + '_pos_team1_%06d' % n), local_kart_1, local_kart_3)
+                np.savez(args.save_dir / str(i) / (uid + '_%06d_pos_ball' % n), local_ball)
+                np.savez(args.save_dir / str(i) / (uid + '_%06d_pos_team0' % n), local_kart_0, local_kart_2)
+                np.savez(args.save_dir / str(i) / (uid + '_%06d_pos_team1' % n), local_kart_1, local_kart_3)
 
-                Image.fromarray(image).save(args.save_dir / str(i) / (uid + '_image_%06d.png' % n))
-                (args.save_dir / str(i) / (uid + '_action_%06d.txt' % n)).write_text(str(action))
-                with open(args.save_dir / str(i) / (uid + '_player_info_%06d' % n), 'wb') as output:
+                Image.fromarray(image).save(args.save_dir / str(i) / (uid + '_%06d_img.png' % n))
+                (args.save_dir / str(i) / (uid + '_%06d_action.txt' % n)).write_text(str(action))
+                with open(args.save_dir / str(i) / (uid + '_%06d_player_info' % n), 'wb') as output:
                     pickle.dump(player_info, output, -1)
                 if save_depth:
                     depth = np.array(race.render_data[i].depth).astype('uint8')
-                    np.save(args.save_dir / str(i) / (uid + '_depth_%06d' % n), depth)
+                    np.save(args.save_dir / str(i) / (uid + '_%06d_depth' % n), depth)
                 if save_labels:
                     label = np.array(race.render_data[i].instance) #& 0xffffff
-                    np.save(args.save_dir / str(i) / (uid + '_label_%06d' % n), label)
+                    np.save(args.save_dir / str(i) / (uid + '_%06d_label' % n), label)
 
         # Make sure we play in real time
         n += 1
-        
+
         sys.stdout.write("frame " + str(n))
         sys.stdout.flush()
         sys.stdout.write('\r')
