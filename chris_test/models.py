@@ -117,7 +117,7 @@ class Detector(torch.nn.Module):
 
         output = self.forward(image)
 
-        heatmap = output[0][i]
+        heatmap = output[0][0]
 
         peaks = extract_peak(heatmap)
 
@@ -145,3 +145,24 @@ def load_model():
     r = Detector()
     r.load_state_dict(load(path.join(path.dirname(path.abspath(__file__)), 'det.th'), map_location='cpu'))
     return r
+
+
+if __name__ == '__main__':
+    """
+    Shows detections of your detector
+    """
+    from .utils import DetectionSuperTuxDataset
+    dataset = DetectionSuperTuxDataset('drive_data/1', min_size=0)
+    import torchvision.transforms.functional as TF
+    from pylab import show, subplots
+    import matplotlib.patches as patches
+
+    fig, axs = subplots(3, 4)
+    model = load_model()
+    for i, ax in enumerate(axs.flat):
+        im, puck = dataset[i]
+        ax.imshow(TF.to_pil_image(im), interpolation=None)
+        b, cx, cy = model.detect(im)
+        ax.add_patch(patches.Circle((cx, cy), radius=max(2  / 2, 0.1), color='rgb'[0]))
+        ax.axis('off')
+    show()
