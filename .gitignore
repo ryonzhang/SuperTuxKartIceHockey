@@ -1,3 +1,5 @@
 **/__pycache__/
 .DS_Store
+drive_data*
+drive_data.zip
 drive_data/

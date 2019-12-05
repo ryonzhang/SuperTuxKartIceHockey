@@ -1,7 +1,10 @@
 import numpy as np
-from .models import Detector, load_model
+# from .models import Detector, load_model
+from chris_test.models import Detector, load_model
 from .controller import Controller1
 from collections import deque
+import torch
+from torchvision.transforms import functional as F
 
 
 class History:
@@ -49,7 +52,7 @@ class HockeyPlayer:
         The player_id starts at 0 and increases by one for each player added. You can use the player id to figure out your team (player_id % 2), or assign different roles to different agents.
         """
         self.team = player_id % 2
-        self.model = load_model("det.th")
+        self.model = load_model()
         self.player_id = player_id//2
 
         if self.player_id == 0: # Should be the goalie TODO:Figure out if the goalie id should be 0 or 1
@@ -68,9 +71,11 @@ class HockeyPlayer:
         """
         Your code here.
         """
+        # print("XXXXXXX")
         # We might want to pass in player_info
         # puck_location_onscreen == None when the puck isn't on the screen
-        puck_location_onscreen = self.model(image)
+        # print(torch.Tensor(image).shape)
+        puck_location_onscreen = self.model.detect(F.to_tensor(image))
 
         action = self.controller.act(action, player_info, puck_location_onscreen)
         HockeyPlayer.messages.append("") # information to be shared among HockeyPlayer class, basically our players.

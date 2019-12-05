@@ -85,7 +85,8 @@ class Detector(torch.nn.Module):
         self.classifier = torch.nn.Conv2d(c, n_output_channels, 1)
 
     def forward(self, x):
-        z = (x - self.input_mean[None, :, None, None].to(x.device)) / self.input_std[None, :, None, None].to(x.device)
+        z = (x - self.input_mean[None, :, None, None]) / self.input_std[None, :, None, None]
+        # z = (x - self.input_mean[None, :, None, None].to(x.device)) / self.input_std[None, :, None, None].to(x.device)
         up_activation = []
         for i in range(self.n_conv):
             # Add all the information required for skip connections
@@ -152,7 +153,7 @@ if __name__ == '__main__':
     Shows detections of your detector
     """
     from .utils import DetectionSuperTuxDataset
-    dataset = DetectionSuperTuxDataset('drive_data/1', min_size=0)
+    dataset = DetectionSuperTuxDataset('drive_data/0', min_size=0)
     import torchvision.transforms.functional as TF
     from pylab import show, subplots
     import matplotlib.patches as patches

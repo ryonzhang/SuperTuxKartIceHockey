@@ -15,7 +15,7 @@ class Controller1:
 
     
     def act(self, action, player_info ,puck_location_onscreen=None):
-        angle = (np.arctan2(aim_point[0], aim_point[2]) * 180.0 / np.pi)
+        # angle = (np.arctan2(aim_point[0], aim_point[2]) * 180.0 / np.pi)
         # will add the piazza code from screen to world found below
 
 
