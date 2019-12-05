@@ -1,6 +1,8 @@
 import numpy as np
 from .models import Detector, load_model
 from .controller import Controller1
+from collections import deque
+
 
 class History:
     def __init__(self, max_history_length, default):
@@ -33,6 +35,9 @@ class HockeyPlayer:
        You may request to play with a different kart.
        Call `python3 -c "import pystk; pystk.init(pystk.GraphicsConfig.ld()); print(pystk.list_karts())"` to see all values.
     """
+    
+    messages = deque(maxlen=3) # mess
+
     kart = "wilber"
 
     # A static history data structure, this is accessed in the controller
@@ -68,6 +73,7 @@ class HockeyPlayer:
         puck_location_onscreen = self.model(image)
 
         action = self.controller.act(action, player_info, puck_location_onscreen)
+        HockeyPlayer.messages.append("") # information to be shared among HockeyPlayer class, basically our players.
 
         return action
 
