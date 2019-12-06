@@ -1,5 +1,6 @@
 import torch
 import torch.nn.functional as F
+import numpy as np
 
 
 def extract_peak(heatmap, max_pool_ks=7, min_score=-1, max_det=1):
@@ -101,7 +102,7 @@ class Detector(torch.nn.Module):
                 z = torch.cat([z, up_activation[i]], dim=1)
         return self.classifier(z)
 
-    def detect(self, image):
+    def detect(self, image, player_info):
         """
            Your code here.
            Implement object detection here.
@@ -111,27 +112,43 @@ class Detector(torch.nn.Module):
            Hint: Use extract_peak here
         """
 
+        # last position on screen (-1 for left; 1 for right)
+        global lastPos
+
         self.eval()
 
-        result = list()
-
+        # get heatmap output
         output = self.forward(image)
 
         heatmap = output[0][0]
 
+        # extract peak if we're confident enough in it
         peaks = extract_peak(heatmap)
 
-        # if the puck was detected on screen, return True and coordinates, else return false and zeroes
+        # if the puck was detected on screen, get x and y coordinate; save screen position
         if (len(peaks) > 0):
             found_puck = True
             x = peaks[0][0]
             y = peaks[0][1]
+            if(x<200):
+                lastPos = -1
+            else:
+                 lastPos = 1
         else:
             found_puck = False
-            x = 0
-            y = 0
 
-        return found_puck, x, y
+        # return none as world position if not on screen; calculate world position from player position and onscreen position otherwise
+        if (found_puck):
+            worldPos = to_numpy(screen_puck_to_world_puck([x.item(), y.item()], np.transpose(player_info.camera.projection), np.transpose(player_info.camera.view)))
+        else:
+            worldPos = None
+
+        return lastPos, worldPos
+
+lastPos = -1
+
+def to_numpy(location):
+    return np.float32([location[0], location[2]])
 
 def save_model(model):
     from torch import save
@@ -145,6 +162,56 @@ def load_model():
     r = Detector()
     r.load_state_dict(load(path.join(path.dirname(path.abspath(__file__)), 'det.th'), map_location='cpu'))
     return r
+
+
+# shamelessly stolen code from piazza
+SCREEN_WIDTH = 400
+SCREEN_HEIGHT = 300
+
+def ray_trace_to_ground(numpy_vec4, view):
+    assert view.shape == (4, 4)
+    assert numpy_vec4.shape[0] == 4
+    assert abs(numpy_vec4[3]) < 1e-7
+
+    camera_location = np.array(list(np.linalg.pinv(view)[:3,3]) + [0])
+    ground_y_coord = 0.3698124289512634,
+    multiplier = (ground_y_coord - camera_location[1]) / numpy_vec4[1]
+    result = camera_location + multiplier * numpy_vec4
+    return result
+
+def view_to_global(numpy_vec4, view):
+    assert numpy_vec4.shape[0] == 4
+    view_inverse = np.linalg.pinv(view)
+    return view_inverse @ numpy_vec4
+
+def homogeneous_to_euclidean(numpy_vec4):
+    assert numpy_vec4.shape[0] == 4
+    # dont want numerical errors to magnify... prolly dont need this check but whatever
+    if abs(numpy_vec4[3]) <= 1e-4:
+        result[3] = 0
+        return numpy_vec4
+    result = numpy_vec4 / numpy_vec4[3]
+    result[3] = 0
+    return result
+
+def screen_to_view(aim_point_image, proj, view):
+    x, y, W, H = *aim_point_image, SCREEN_WIDTH, SCREEN_HEIGHT
+    projection_inverse = np.linalg.pinv(proj)
+    ndc_coords = np.array([float(x) / (W / 2) - 1, 1 - float(y) / (H / 2), 0, 1])
+    return projection_inverse @ ndc_coords
+
+def screen_puck_to_world_puck(screen_puck_coords, proj, view):
+    """
+    Call this function with
+    @param screen_puck_coords: [screen_puck.x, scren_puck.y]
+    @param proj: camera.projection.T
+    @param view: camera.view.T
+    """
+    view_puck_coords = homogeneous_to_euclidean(screen_to_view(screen_puck_coords, proj, view))
+    view_puck_dir = view_puck_coords / np.linalg.norm(view_puck_coords)
+    global_puck_dir = view_to_global(view_puck_dir, view)
+    global_puck_dir = global_puck_dir / np.linalg.norm(global_puck_dir)
+    return ray_trace_to_ground(global_puck_dir, view)
 
 
 if __name__ == '__main__':
@@ -162,7 +229,8 @@ if __name__ == '__main__':
     for i, ax in enumerate(axs.flat):
         im, puck = dataset[i]
         ax.imshow(TF.to_pil_image(im), interpolation=None)
-        b, cx, cy = model.detect(im)
+        lastPos, worldPos = model.detect(im)
+        print(worldPos)
         ax.add_patch(patches.Circle((cx, cy), radius=max(2  / 2, 0.1), color='rgb'[0]))
         ax.axis('off')
     show()
