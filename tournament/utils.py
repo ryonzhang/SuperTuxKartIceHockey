@@ -2,6 +2,7 @@ import pystk
 import numpy as np
 
 
+from . import gui
 class Player:
     def __init__(self, player, team=0):
         self.player = player
@@ -40,6 +41,7 @@ class Tournament:
 
         self.k.start()
         self.k.step()
+        self.uis = [gui.UI([gui.VT['IMAGE']]) for i in range(len(players))]
 
     def play(self, save=None, max_frames=50):
         state = pystk.WorldState()
@@ -48,12 +50,13 @@ class Tournament:
             import os
             if not os.path.exists(save):
                 os.makedirs(save)
-
+        
         for t in range(max_frames):
             print('\rframe %d' % t, end='\r')
 
             state.update()
 
+            list_info = []
             list_actions = []
             for i, p in enumerate(self.active_players):
                 player = state.players[i]
@@ -68,11 +71,13 @@ class Tournament:
 
                 if save is not None:
                     PIL.Image.fromarray(image).save(os.path.join(save, 'player%02d_%05d.png' % (i, t)))
-
+            # self.uis[players.kart.player_id].show(self.k.render_data[players.kart.player_id])
+            # list_info = []
             s = self.k.step(list_actions)
             if not s:  # Game over
                 break
-
+            for ui, d in zip(self.uis, self.k.render_data):
+                ui.show(d)
         if save is not None:
             import subprocess
             for i, p in enumerate(self.active_players):

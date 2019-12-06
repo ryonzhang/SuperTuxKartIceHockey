@@ -133,7 +133,7 @@ class Detector(torch.nn.Module):
 
         # extract peak if we're confident enough in it
         peaks = extract_peak(heatmap)
-        print("SAJDSASALJDLSAJDJD{}".format(type(player_info)))
+        
         # if the puck was detected on screen, get x and y coordinate; save screen position
         if (len(peaks) > 0):
             found_puck = True
@@ -149,6 +149,7 @@ class Detector(torch.nn.Module):
         # return none as world position if not on screen; calculate world position from player position and onscreen position otherwise
         if (found_puck):
             worldPos = to_numpy(screen_puck_to_world_puck([x.item(), y.item()], np.transpose(player_info.camera.projection), np.transpose(player_info.camera.view)))
+            print("PUCK WORLD LOCATIONNNNNNNN{}".format(worldPos))
         else:
             worldPos = None
 

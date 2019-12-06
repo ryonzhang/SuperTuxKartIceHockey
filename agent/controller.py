@@ -87,15 +87,15 @@ class Controller1:
             # [1] is positive towards enemy goal, negitive when facing your goal
             puck_location*=self.team_orientaion_multiplier
 
-        pos_me = to_numpy(player_info.location)*self.team_orientaion_multiplier
+        pos_me = to_numpy(player_info.kart.location)*self.team_orientaion_multiplier
         
         # Get kart vector
-        front_me = to_numpy(player_info.front)*self.team_orientaion_multiplier
+        front_me = to_numpy(player_info.kart.front)*self.team_orientaion_multiplier
         ori_me = get_vector_from_this_to_that(pos_me, front_me)
 
         # Determine we are moving backwards
         backing_turn_multiplier = 1.
-        kart_vel = np.dot(to_numpy(player_info.velocity)*self.team_orientaion_multiplier,ori_me)
+        kart_vel = np.dot(to_numpy(player_info.kart.velocity)*self.team_orientaion_multiplier,ori_me)
         if kart_vel < 0:
             backing_turn_multiplier = -1.
         print("kart_vel",kart_vel)

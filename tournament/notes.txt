@@ -1,0 +1,11 @@
+import matplotlib.pyplot as plt
+
+tmp = np.uint8(img[0].detach().cpu().numpy().transpose(1, 2, 0) * 255)
+plt.imshow(tmp)
+scaled_x = (pred[0][0].item() + 1) / 2 * 400
+scaled_y = (pred[0][1].item() + 1) / 2 * 300
+scaled_label_x = (label[0][0].item() + 1) / 2 * 400
+scaled_label_y = (label[0][1].item() + 1) / 2 * 300
+plt.plot(scaled_x, scaled_y, 'ro')
+plt.plot(scaled_label_x, scaled_label_y, 'go')
+plt.show()
