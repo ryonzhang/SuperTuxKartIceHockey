@@ -74,6 +74,7 @@ class Controller1:
         self.goalKeepLoc = np.array([0.0,-66]) #const
         self.attempted_to_fire = False
         self.his = History(max_history_length = 10, default = np.array([0.0,0.0]))
+        self.last_world_pos = np.array([0.0,-64.5])
      
     def act(self, action, player_info, puck_location=None, last_seen_side=None, testing=False):
         # Fire every other frame
@@ -87,7 +88,7 @@ class Controller1:
             puck_location*=self.team_orientaion_multiplier
 
         pos_me = to_numpy(player_info.location)*self.team_orientaion_multiplier
-
+        
         # Get kart vector
         front_me = to_numpy(player_info.front)*self.team_orientaion_multiplier
         ori_me = get_vector_from_this_to_that(pos_me, front_me)
@@ -99,6 +100,11 @@ class Controller1:
             backing_turn_multiplier = -1.
         print("kart_vel",kart_vel)
 
+        # determine if we are  in a new round
+        if (kart_vel == 0 and abs(np.linalg.norm(self.last_world_pos-pos_me))>5):
+            Controller1.goalieID=0.
+
+        self.last_world_pos = pos_me
             
         if (Controller1.goalieID==self.player_id): # I'm goalie
             ori_to_goalKeepLoc = get_vector_from_this_to_that(pos_me, self.goalKeepLoc,normalize=False)

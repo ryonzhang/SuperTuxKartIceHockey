@@ -87,6 +87,10 @@ class Detector(torch.nn.Module):
 
     def forward(self, x):
         z = (x - self.input_mean[None, :, None, None]) / self.input_std[None, :, None, None]
+        
+        if (self.eval):
+            z = torch.cat([z,z.flip(3)],0)
+        
         up_activation = []
         for i in range(self.n_conv):
             # Add all the information required for skip connections
@@ -100,7 +104,12 @@ class Detector(torch.nn.Module):
             # Add the skip connection
             if self.use_skip:
                 z = torch.cat([z, up_activation[i]], dim=1)
-        return self.classifier(z)
+        z = self.classifier(z)
+        
+        if(self.eval):
+            z_ = [z[0][None, :,:,:] ,z[1][None, :,:,:]]
+            z = (z_[0]+z_[1].flip(3))/2
+        return z
 
     def detect(self, image, player_info):
         """
