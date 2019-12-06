@@ -95,7 +95,7 @@ if __name__ == "__main__":
     config.difficulty = 2
 
     num_player = 4
-    config.players[0].controller = pystk.PlayerConfig.Controller.AI_CONTROL
+    config.players[0].controller = pystk.PlayerConfig.Controller.PLAYER_CONTROL
     for i in range(3):
         config.players.append(
                 pystk.PlayerConfig(random.choice(possible_karts), pystk.PlayerConfig.Controller.AI_CONTROL, (args.team + i + 1) % 2))
@@ -130,7 +130,12 @@ if __name__ == "__main__":
     while (n<args.steps) and ((not args.display) or all(ui.visible for ui in uis)):
         if (not args.display) or (not all(ui.pause for ui in uis)):
             #race.step(uis[0].current_action)
-            race.step()
+
+            action = pystk.Action()
+            action.acceleration = 1.0
+            action.steer = np.random.uniform(-1,1)
+
+            race.step(action)
             state.update()
             if args.verbose and config.mode == config.RaceMode.SOCCER:
                 print('Score ', state.soccer.score)
@@ -156,7 +161,7 @@ if __name__ == "__main__":
 
 
             # save positions, actions for all players
-            for i in range(len(race.render_data)):
+            for i in 0, 2:
                 image = np.array(race.render_data[i].image)
                 action = race.last_action[i]#action_dict(uis[i].current_action)
                 player_info = state.karts[i]
