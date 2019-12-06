@@ -1,5 +1,5 @@
 import numpy as np
-from .models import Detector, load_model
+from chris_test.models import Detector, load_model
 from .controller import Controller1
 from collections import deque
 
@@ -27,7 +27,7 @@ class HockeyPlayer:
         """
         self.team = player_id % 2
         self.team_orientaion_multiplier = -2*(self.team%2)+1
-        #self.model = load_model("det.th")
+        self.model = load_model()
         self.player_id = player_id//2
 
        
@@ -47,7 +47,7 @@ class HockeyPlayer:
         # puck_location is: None if we cant see the puck, [x, z]
         # self.team_orientaion_multiplier is a multiplier to any game position argument
 
-        last_seen_side, puck_location = self.model.detect(image, player_info)
+        last_seen_side, puck_location = self.model.detect(F.to_tensor(image), player_info)
 
         action = self.controller.act(action, player_info, puck_location, last_seen_side)
 

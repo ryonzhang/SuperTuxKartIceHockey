@@ -208,25 +208,3 @@ class Controller1:
 
         return action
 
-
-
-if __name__ == '__main__':
-    from .utils import PyTux
-    from argparse import ArgumentParser
-
-
-    def test_controller(args):
-        import numpy as np
-        pytux = PyTux()
-        for t in args.track:
-            steps = pytux.rollout(t, control, max_frames=1000, verbose=args.verbose)
-            #print(steps)
-        pytux.close()
-
-
-    parser = ArgumentParser()
-    parser.add_argument('track', nargs='+')
-    parser.add_argument('-v', '--verbose', action='store_true')
-    # parser.add_argument('-m', '--max_frames', type=int, default=3)
-    args = parser.parse_args()
-    test_controller(args)

@@ -86,7 +86,7 @@ class Detector(torch.nn.Module):
         self.classifier = torch.nn.Conv2d(c, n_output_channels, 1)
 
     def forward(self, x):
-        z = (x - self.input_mean[None, :, None, None].to(x.device)) / self.input_std[None, :, None, None].to(x.device)
+        z = (x - self.input_mean[None, :, None, None]) / self.input_std[None, :, None, None]
         up_activation = []
         for i in range(self.n_conv):
             # Add all the information required for skip connections
@@ -124,7 +124,7 @@ class Detector(torch.nn.Module):
 
         # extract peak if we're confident enough in it
         peaks = extract_peak(heatmap)
-
+        print("SAJDSASALJDLSAJDJD{}".format(type(player_info)))
         # if the puck was detected on screen, get x and y coordinate; save screen position
         if (len(peaks) > 0):
             found_puck = True
