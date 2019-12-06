@@ -35,8 +35,6 @@ class HockeyPlayer:
        You may request to play with a different kart.
        Call `python3 -c "import pystk; pystk.init(pystk.GraphicsConfig.ld()); print(pystk.list_karts())"` to see all values.
     """
-    
-    messages = deque(maxlen=3) # mess
 
     kart = "wilber"
 
@@ -49,13 +47,12 @@ class HockeyPlayer:
         The player_id starts at 0 and increases by one for each player added. You can use the player id to figure out your team (player_id % 2), or assign different roles to different agents.
         """
         self.team = player_id % 2
-        self.model = load_model("det.th")
+        self.team_orientaion_multiplier = -2*(self.team%2)+1
+        #self.model = load_model("det.th")
         self.player_id = player_id//2
 
-        if self.player_id == 0: # Should be the goalie TODO:Figure out if the goalie id should be 0 or 1
-            self.controller = Controller1(self.team)
-        else: # Attacker(s), only one attacker for 2v2
-            self.controller = Controller1(self.team)
+       
+        self.controller = Controller1(self.team_orientaion_multiplier,self.player_id)
 
     def act(self, image, player_info):
         """
@@ -65,15 +62,15 @@ class HockeyPlayer:
         return: Dict describing the action
         """
         action = {'acceleration': 0, 'brake': False, 'drift': False, 'nitro': False, 'rescue': False, 'steer': 0}
-        """
-        Your code here.
-        """
-        # We might want to pass in player_info
-        # puck_location_onscreen == None when the puck isn't on the screen
-        puck_location_onscreen = self.model(image)
 
-        action = self.controller.act(action, player_info, puck_location_onscreen)
-        HockeyPlayer.messages.append("") # information to be shared among HockeyPlayer class, basically our players.
+        # This returns the puck location if we can see the puck
+        # last_seen_side is: 0 is left, 1 is right
+        # puck_location is: None if we cant see the puck, [x, z]
+        # self.team_orientaion_multiplier is a multiplier to any game position argument
+
+        last_seen_side, puck_location = self.model.detect(image, player_info)
+
+        action = self.controller.act(action, player_info, puck_location, last_seen_side)
 
         return action
 

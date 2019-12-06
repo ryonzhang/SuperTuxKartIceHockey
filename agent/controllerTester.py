@@ -38,11 +38,11 @@ if __name__ == "__main__":
     config.track = "icy_soccer_field"
     config.mode = config.RaceMode.SOCCER
     config.step_size = 0.1
-    config.num_kart = 1
+    config.num_kart = 2
     config.players[0].kart = "wilber"
     config.players[0].controller = pystk.PlayerConfig.Controller.PLAYER_CONTROL
     config.players[0].team = 0
-    #config.players.append(pystk.PlayerConfig("", pystk.PlayerConfig.Controller.AI_CONTROL, 1))
+    config.players.append(pystk.PlayerConfig("", pystk.PlayerConfig.Controller.AI_CONTROL, 1))
 
     race = pystk.Race(config)
     race.start()
@@ -71,8 +71,7 @@ if __name__ == "__main__":
             
 
         puck_location = to_numpy(state.soccer.ball.location) # We need to get this from NN output
-        #pos_ai = to_numpy(state.karts[1].location)
-        pos_ai = to_numpy([0.,0.,0.])
+        pos_ai = to_numpy(state.karts[1].location)
         pos_me = to_numpy(state.karts[0].location)
 
 
@@ -102,8 +101,8 @@ if __name__ == "__main__":
         else:
             action = ctrl0.act(action, state.karts[0], puck_location,testing=True)
 
-        #uis[0].current_action.steer = action["steer"]
-        #uis[0].current_action.acceleration = action["acceleration"]
+        uis[0].current_action.steer = action["steer"]
+        uis[0].current_action.acceleration = action["acceleration"]
 
         # Live plotting. Sorry it's ugly.
         ax.clear()

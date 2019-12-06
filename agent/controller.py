@@ -1,33 +1,59 @@
 import numpy as np
 import torch
-from collections import deque # for queue
 
-RADIAN_TO_DEGREE = 180/np.pi
-memory = deque(maxlen=3)
+def to_numpy(location):
+    """
+    Don't care about location[1], which is the height
+    """
+    return np.float32([location[0], location[2]])
+
+
+def get_vector_from_this_to_that(me, obj, normalize=True):
+    """
+    Expects numpy arrays as input
+    """
+    vector = obj - me
+
+    if normalize:
+        return vector / np.linalg.norm(vector)
+
+    return vector
 
 class Controller1:
-    def __init__(self, team):
+    def __init__(self, team_orientaion_multiplier, player_id):
         """
         :param team: A 0 or 1 representing which team we are on
         """
-        self.team = team
-        self.team_orientaion_multiplier = -2*(team%2)+1
+        self.team_orientaion_multiplier = team_orientaion_multiplier
+        self.player_id = player_id
 
     
-    def act(self, action, player_info ,puck_location_onscreen=None):
-        angle = (np.arctan2(aim_point[0], aim_point[2]) * 180.0 / np.pi)
-        # will add the piazza code from screen to world found below
+    def act(self, action, player_info, puck_location=None, last_seen_side=None, testing=False):
+        if (puck_location!=None):
+            pos_me = to_numpy(player_info.location)
+            if (testing):
+                #  Standardizing direction 2 elements
+                # [0] is negitive when facing left side of court (left of your goal), positive when right
+                # [1] is positive towards enemy goal, negitive when facing your goal
+                puck_location*=self.team_orientaion_multiplier
+            pos_me*=self.team_orientaion_multiplier
 
 
-        # a = angle
+            # Get some directional vectors. 
+            front_me = to_numpy(player_info.front)*self.team_orientaion_multiplier
+            ori_me = get_vector_from_this_to_that(pos_me, front_me)
+            ori_to_puck = get_vector_from_this_to_that(pos_me, puck_location)
 
-        # memory.append(a)
-        # if sum(memory) / len(memory) > 25: # smoothing , previously just above abs(a) > 35:
-        #     action.drift=True
-        # else:
-        #     action.drift=False
-        # action.steer = a
-        # action.acceleration = 1.0 if current_vel < 22.0 else 0.0
+            # Turn towards the item to pick up. Not very good at turning.
+            action["acceleration"] = 0.5
+
+            turn_mag = abs(1 - np.dot(ori_me, ori_to_puck))
+            print(turn_mag)
+            if turn_mag > 1e-25:
+                action["steer"] = np.sign(np.cross(ori_to_puck, ori_me))*turn_mag*5000
+
+
+
         return action
 
 
