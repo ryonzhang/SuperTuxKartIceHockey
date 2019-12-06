@@ -31,7 +31,6 @@ import random
 import uuid
 import os
 import sys
-from random_agent.player import HockeyPlayer
 from . import gui
 
 # ripped from hw6
@@ -48,8 +47,6 @@ def action_dict(action):
 
 
 if __name__ == "__main__":
-    randomplayer = HockeyPlayer(2)
-
     # create uuid for file names
     uid = str(uuid.uuid1())
 
@@ -98,16 +95,10 @@ if __name__ == "__main__":
     config.difficulty = 2
 
     num_player = 4
-    config.players[0].controller = pystk.PlayerConfig.Controller.AI_CONTROL
-    for i in range(1):
+    config.players[0].controller = pystk.PlayerConfig.Controller.PLAYER_CONTROL
+    for i in range(3):
         config.players.append(
                 pystk.PlayerConfig(random.choice(possible_karts), pystk.PlayerConfig.Controller.AI_CONTROL, (args.team + i + 1) % 2))
-
-    config.players.append(
-                pystk.PlayerConfig(random.choice(possible_karts), pystk.PlayerConfig.Controller.PLAYER_CONTROL, 0))
-
-    config.players.append(
-                pystk.PlayerConfig(random.choice(possible_karts), pystk.PlayerConfig.Controller.AI_CONTROL, 1))
 
     config.players[0].team = args.team
 
@@ -141,9 +132,8 @@ if __name__ == "__main__":
             #race.step(uis[0].current_action)
 
             action = pystk.Action()
-            player_action = randomplayer.act(None, None)
-            for a in player_action:
-                setattr(action, a, player_action[a])
+            action.acceleration = 1.0
+            action.steer = np.random.uniform(-1,1)
 
             race.step(action)
             state.update()
