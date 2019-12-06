@@ -3,24 +3,6 @@ from .models import Detector, load_model
 from .controller import Controller1
 from collections import deque
 
-
-class History:
-    def __init__(self, max_history_length, default):
-        self.elements = []
-        self.max_history_length = max_history_length
-        self.default = default
-
-    def push(self, e):
-        if len(self.elements) < self.max_history_length:
-            self.elements.append(e)
-        elif self.elements[0] < e:
-            del self.elements[0]
-            self.elements.append(e)
-    def peek(self, e):
-        if (len(self.elements)!=0):
-            return self.elements[-1]
-        return self.default
-
 class HockeyPlayer:
     """
        Your ice hockey player. You may do whatever you want here. There are three rules:
@@ -37,9 +19,6 @@ class HockeyPlayer:
     """
 
     kart = "wilber"
-
-    # A static history data structure, this is accessed in the controller
-    last_seen_q = History(max_history_length = 20, default = np.array([0.0,0.0]))
     
     def __init__(self, player_id = 0):
         """
@@ -61,7 +40,7 @@ class HockeyPlayer:
         :param player_info: pystk.Player object for the current kart.
         return: Dict describing the action
         """
-        action = {'acceleration': 0, 'brake': False, 'drift': False, 'nitro': False, 'rescue': False, 'steer': 0}
+        action = {'acceleration': 0, 'brake': False, 'drift': False, 'nitro': False, 'rescue': False, 'steer': 0, 'fire': False}
 
         # This returns the puck location if we can see the puck
         # last_seen_side is: -1 is left, 1 is right

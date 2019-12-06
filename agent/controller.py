@@ -1,6 +1,28 @@
 import numpy as np
 import torch
 
+
+class History:
+    def __init__(self, max_history_length, default):
+        self.elements = []
+        self.max_history_length = max_history_length
+        self.default = default
+
+    def push(self, e):
+        if len(self.elements) < self.max_history_length:
+            self.elements.append(e)
+        else:
+            del self.elements[0]
+            self.elements.append(e)
+    def peek(self, N=1):
+        if (len(self.elements)>=N):
+            return self.elements[-N:]
+        elif (len(self.elements)!=0):
+            return self.elements[:-1]
+        return self.default
+        
+
+
 def to_numpy(location):
     """
     Don't care about location[1], which is the height
@@ -38,110 +60,153 @@ def angle_between(v1, v2):
     return np.arccos(np.clip(np.dot(v1_u, v2_u), -1.0, 1.0))
 
 class Controller1:
+    goalieID=0.
+
+    
+
     def __init__(self, team_orientaion_multiplier, player_id):
         """
         :param team: A 0 or 1 representing which team we are on
         """
         self.team_orientaion_multiplier = team_orientaion_multiplier
         self.player_id = player_id
-        self.goal = np.array([0.0,64.5])
-
-    
+        self.goal = np.array([0.0,64.5]) #const
+        self.goalKeepLoc = np.array([0.0,-66]) #const
+        self.attempted_to_fire = False
+        self.his = History(max_history_length = 10, default = np.array([0.0,0.0]))
+     
     def act(self, action, player_info, puck_location=None, last_seen_side=None, testing=False):
-        if puck_location is not None:
-            pos_me = to_numpy(player_info.location)
-            if (testing):
-                #  Standardizing direction 2 elements
-                # [0] is negitive when facing left side of court (left of your goal), positive when right
-                # [1] is positive towards enemy goal, negitive when facing your goal
-                puck_location*=self.team_orientaion_multiplier
-            pos_me*=self.team_orientaion_multiplier
+        # Fire every other frame
+        action["fire"]= self.attempted_to_fire 
+        self.attempted_to_fire = not self.attempted_to_fire
+        # Get world positions
+        if (testing and puck_location is not None):
+            #  Standardizing direction 2 elements
+            # [0] is negitive when facing left side of court (left of your goal), positive when right
+            # [1] is positive towards enemy goal, negitive when facing your goal
+            puck_location*=self.team_orientaion_multiplier
 
+        pos_me = to_numpy(player_info.location)*self.team_orientaion_multiplier
 
-            # Get some directional vectors. 
-            front_me = to_numpy(player_info.front)*self.team_orientaion_multiplier
-            ori_me = get_vector_from_this_to_that(pos_me, front_me)
-            ori_to_puck = get_vector_from_this_to_that(pos_me, puck_location,normalize=False)
-            ori_to_puck_n = get_vector_from_this_to_that(pos_me, puck_location)
-            ori_puck_to_goal = get_vector_from_this_to_that(puck_location, self.goal,normalize=False)
+        # Get kart vector
+        front_me = to_numpy(player_info.front)*self.team_orientaion_multiplier
+        ori_me = get_vector_from_this_to_that(pos_me, front_me)
+
+        # Determine we are moving backwards
+        backing_turn_multiplier = 1.
+        kart_vel = np.dot(to_numpy(player_info.velocity)*self.team_orientaion_multiplier,ori_me)
+        if kart_vel < 0:
+            backing_turn_multiplier = -1.
+        print("kart_vel",kart_vel)
 
             
+        if (Controller1.goalieID==self.player_id): # I'm goalie
+            ori_to_goalKeepLoc = get_vector_from_this_to_that(pos_me, self.goalKeepLoc,normalize=False)
+            ori_to_goalKeepLoc_n = get_vector_from_this_to_that(pos_me, self.goalKeepLoc)
+            to_goalKeepLoc_mag = np.linalg.norm(ori_to_goalKeepLoc)
+            print("goalie_mag", to_goalKeepLoc_mag)
+            if puck_location is not None and (puck_location[1]<-24.5): # puck is in our third, Attack!
+                self.his.push(puck_location)
+                ori_to_puck = get_vector_from_this_to_that(pos_me, puck_location,normalize=False)
+                ori_to_puck_n = get_vector_from_this_to_that(pos_me, puck_location)
+                ori_puck_to_goal = get_vector_from_this_to_that(puck_location, self.goal,normalize=False)
+                ori_puck_to_goal_n = get_vector_from_this_to_that(puck_location, self.goal,normalize=True)
+                
 
-            # Turn towards the item to pick up. Not very good at turning.
-            action["acceleration"] = 0.5
-            to_puck_mag = np.linalg.norm(ori_to_puck)
-            print("ori_to_puck",ori_to_puck,to_puck_mag)
+                action["acceleration"] = 1
 
-            #if (to_puck_mag>10):
-            turn_mag = abs(1 - np.dot(ori_me, ori_to_puck_n))
-            #print(turn_mag)
-            if turn_mag > 1e-25:
-                action["steer"] = np.sign(np.cross(ori_to_puck_n, ori_me))*turn_mag*5000
-            
+                _his = self.his.peek(2)
+                if len(_his)==2 and get_vector_from_this_to_that(_his[0],_his[1],normalize=False)[1]<-1:
+                    dif = get_vector_from_this_to_that(_his[0],_his[1],normalize=False)
+                    print("dif",dif)
+                    pos_hit_loc = puck_location + 2*dif
+                else:
+                    pos_hit_loc = puck_location-.5*ori_puck_to_goal_n
+                
+                ori_to_puck_n = get_vector_from_this_to_that(pos_me, pos_hit_loc)
+                turn_mag = abs(1 - np.dot(ori_me, ori_to_puck_n))
+                if turn_mag > 1e-25:
+                    action["steer"] = np.sign(np.cross(ori_to_puck_n, ori_me))*turn_mag*50000*backing_turn_multiplier
+                print("trying to switch",abs(angle_between(ori_to_puck,ori_me)) < .8, puck_location[1]>-35, np.linalg.norm(ori_to_puck)<15,np.linalg.norm(ori_to_puck))
+                if (abs(angle_between(ori_to_puck,ori_me)) < .8 and puck_location[1]>-35 and np.linalg.norm(ori_to_puck)<15): #switch rolls
+                    print("SWITCHING",Controller1.goalieID)
+                    Controller1.goalieID = Controller1.goalieID+1%2
+            elif (to_goalKeepLoc_mag>2): #Goalie isnt at goal keeper location
+                if np.dot(ori_to_goalKeepLoc,ori_me)<0:
+                    action["brake"] = 1.
+                    action["acceleration"] = 0.0
+                else:
+                    action["acceleration"] = 0.2
+                turn_mag = abs(1 - np.dot(ori_me, ori_to_goalKeepLoc_n))
+                #print(turn_mag)
+                if turn_mag > 1e-25:
+                    action["steer"] = -1*np.sign(np.cross(ori_to_goalKeepLoc_n, ori_me))*turn_mag*5000*backing_turn_multiplier
+            elif (to_goalKeepLoc_mag<8): # At goal keeper location
+                if kart_vel < 0:
+                    action["acceleration"] = abs(kart_vel/10)
+                if puck_location is not None:
+                    self.his.push(puck_location)
+                    ori_to_puck = get_vector_from_this_to_that(pos_me, puck_location,normalize=False)
+                    ori_to_puck_n = get_vector_from_this_to_that(pos_me, puck_location)
+                    
+                    
+                    turn_mag = abs(1 - np.dot(ori_me, ori_to_puck_n))
+                    
+                    if turn_mag > .0005:
+                        print("turn_mag",turn_mag)
+                        if np.dot(ori_to_goalKeepLoc,ori_me)<0:
+                            action["brake"] = 1.
+                            action["acceleration"] = 0.0
+                        else:
+                            action["acceleration"] = (abs(kart_vel)+.2)/4.5
+                        action["steer"] = np.sign(np.cross(ori_to_puck_n, ori_me))*turn_mag*5000*backing_turn_multiplier
+        
+                else: # Doesn't have vision of puck
+                    print("last_seen_side",last_seen_side)
+                    action["brake"] = 1.
+                    action["acceleration"] = 0.0
+                    action["steer"] = backing_turn_multiplier*last_seen_side
+        else: # I'm Striker
+            if puck_location is not None:
 
-        elif last_seen_side is not None:
-            print("last_seen_side",last_seen_side)
+                ori_to_puck = get_vector_from_this_to_that(pos_me, puck_location,normalize=False)
+                ori_to_puck_n = get_vector_from_this_to_that(pos_me, puck_location)
+                ori_puck_to_goal = get_vector_from_this_to_that(puck_location, self.goal,normalize=False)
+                ori_puck_to_goal_n = get_vector_from_this_to_that(puck_location, self.goal,normalize=True)
 
+                to_puck_mag = np.linalg.norm(ori_to_puck)
+                #if (pos_me[1]>24.5): #there third
+                #elif (pos_me[1]<-24.5): #our third
+                
+                if (to_puck_mag>20): # not close to puck
+                    action["acceleration"] = 1
+                    if (to_puck_mag>80):# really far
+                        action["acceleration"] = .8
+                    print("not close to puck")
+                    turn_mag = abs(1 - np.dot(ori_me, ori_to_puck_n))
+                    #print(turn_mag)
+                    if turn_mag > 1e-25:
+                        action["steer"] = np.sign(np.cross(ori_to_puck_n, ori_me))*turn_mag*5000*backing_turn_multiplier
+                else: # close to puck
+                    print("close to puck")
+                    #ab_player_puck = angle_between(ori_to_puck,ori_me)
 
+                    action["acceleration"] = .8
+                    if (to_puck_mag>10):# really close
+                        action["acceleration"] = .5
+                    pos_hit_loc = puck_location-1.3*ori_puck_to_goal_n
+                    ori_to_puck_n = get_vector_from_this_to_that(pos_me, pos_hit_loc)
+                    turn_mag = abs(1 - np.dot(ori_me, ori_to_puck_n))
+                    if turn_mag > 1e-25:
+                        action["steer"] = np.sign(np.cross(ori_to_puck_n, ori_me))*turn_mag*5000*backing_turn_multiplier
+
+            else: # Doesn't have vision of puck
+                print("last_seen_side",last_seen_side)
+                action["brake"] = 1.
+                action["acceleration"] = 0.0
+                action["steer"] = backing_turn_multiplier*last_seen_side
 
         return action
-
-
-
-# https://piazza.com/class/jzsr2l6kqaa5xi?cid=395
-
-# SCREEN_WIDTH = 400
-# SCREEN_HEIGHT = 300
-
-# def ray_trace_to_ground(numpy_vec4, view):
-#     assert view.shape == (4, 4)
-#     assert numpy_vec4.shape[0] == 4
-#     assert abs(numpy_vec4[3]) < 1e-7
-
-#     camera_location = np.array(list(np.linalg.pinv(view)[:3,3]) + [0])
-#     ground_y_coord = 0.3698124289512634,
-#     multiplier = (ground_y_coord - camera_location[1]) / numpy_vec4[1]
-#     result = camera_location + multiplier * numpy_vec4
-#     return result
-
-# def view_to_global(numpy_vec4, view):
-#     assert numpy_vec4.shape[0] == 4
-#     view_inverse = np.linalg.pinv(view)
-#     return view_inverse @ numpy_vec4
-
-# def homogeneous_to_euclidean(numpy_vec4):
-#     assert numpy_vec4.shape[0] == 4
-#     # dont want numerical errors to magnify... prolly dont need this check but whatever
-#     if abs(numpy_vec4[3]) <= 1e-4:
-#         result[3] = 0
-#         return numpy_vec4
-#     result = numpy_vec4 / numpy_vec4[3]
-#     result[3] = 0
-#     return result
-
-# def screen_to_view(aim_point_image, proj, view):
-#     x, y, W, H = *aim_point_image, SCREEN_WIDTH, SCREEN_HEIGHT
-#     projection_inverse = np.linalg.pinv(proj)
-#     ndc_coords = np.array([float(x) / (W / 2) - 1, 1 - float(y) / (H / 2), 0, 1])
-#     return projection_inverse @ ndc_coords
-
-# def screen_puck_to_world_puck(screen_puck_coords, proj, view):
-#     """
-#     Call this function with
-#     @param screen_puck_coords: [screen_puck.x, scren_puck.y]
-#     @param proj: camera.projection.T
-#     @param view: camera.view.T
-#     """
-#     view_puck_coords = homogeneous_to_euclidean(screen_to_view(screen_puck_coords, proj, view))
-#     view_puck_dir = view_puck_coords / np.linalg.norm(view_puck_coords)
-#     global_puck_dir = view_to_global(view_puck_dir, view)
-#     global_puck_dir = global_puck_dir / np.linalg.norm(global_puck_dir)
-#     return ray_trace_
-
-
-
-
-
 
 
 
@@ -155,7 +220,7 @@ if __name__ == '__main__':
         pytux = PyTux()
         for t in args.track:
             steps = pytux.rollout(t, control, max_frames=1000, verbose=args.verbose)
-            print(steps)
+            #print(steps)
         pytux.close()
 
 

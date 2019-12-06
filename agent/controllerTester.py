@@ -38,14 +38,14 @@ if __name__ == "__main__":
     config.track = "icy_soccer_field"
     config.mode = config.RaceMode.SOCCER
     config.step_size = 0.1
-    config.num_kart = 2
+    config.num_kart = 4
     config.players[0].kart = "wilber"
     config.players[0].controller = pystk.PlayerConfig.Controller.PLAYER_CONTROL
     config.players[0].team = 0
     config.players.append(pystk.PlayerConfig("", pystk.PlayerConfig.Controller.AI_CONTROL, 1))
-    #config.players.append(pystk.PlayerConfig("", pystk.PlayerConfig.Controller.PLAYER_CONTROL, 0))
-    #config.players.append(pystk.PlayerConfig("", pystk.PlayerConfig.Controller.AI_CONTROL, 1))
-
+    config.players.append(pystk.PlayerConfig("", pystk.PlayerConfig.Controller.PLAYER_CONTROL, 0))
+    config.players.append(pystk.PlayerConfig("", pystk.PlayerConfig.Controller.AI_CONTROL, 1))
+    config.difficulty = 2
     race = pystk.Race(config)
     race.start()
 
@@ -63,16 +63,29 @@ if __name__ == "__main__":
     
     team_orientaion_multiplier = -2*(config.players[0].team %2)+1
     ctrl0 = Controller1(team_orientaion_multiplier,0)
-    last_seen_side= None
+    ctrl1 = Controller1(team_orientaion_multiplier,1)
+    last_seen_side0 = None
+    last_seen_side1 = None
     goal = np.array([0.0,64.5])
+
+    race.step(uis[0].current_action)
+    state.update()
     while all(ui.visible for ui in uis):
         if not all(ui.pause for ui in uis):
+            #print(uis[0].current_action)
             race.step(uis[0].current_action)
+            #race.step(uis[1].current_action)
             state.update()
+            #race.step(uis[0].current_action)
+            #state.update()
             
-
+            
+        
         puck_location = to_numpy(state.soccer.ball.location) # We need to get this from NN output
-        pos_ai = to_numpy(state.karts[1].location)
+        if (len(state.karts)==1):
+            pos_ai =np.array([0.0,0.0])
+        else:
+            pos_ai = to_numpy(state.karts[1].location)
         pos_me = to_numpy(state.karts[0].location)
 
 
@@ -82,6 +95,7 @@ if __name__ == "__main__":
         puck_location*=team_orientaion_multiplier
         pos_ai*=team_orientaion_multiplier
         pos_me*=team_orientaion_multiplier
+
 
         # Look for the puck
         closest_item_distance = np.linalg.norm(
@@ -99,17 +113,46 @@ if __name__ == "__main__":
         #print("ori_to_puck",otp,np.linalg.norm(otp))
 
 
-        # set actions
-        action = {'acceleration': 0, 'brake': False, 'drift': False, 'nitro': False, 'rescue': False, 'steer': 0}
+        # set actions for kart0
+        action0 = {'acceleration': 0, 'brake': False, 'drift': False, 'nitro': False, 'rescue': False, 'steer': 0, 'fire': False}
         turn_mag = abs(1 - np.dot(ori_me, ori_to_puck))
         if (turn_mag >.4):
-            action = ctrl0.act(action, state.karts[0],last_seen_side=last_seen_side, testing=True)
+            action0 = ctrl0.act(action0, state.karts[0],puck_location=None,last_seen_side=last_seen_side0, testing=True)
         else:
-            last_seen_side = np.sign(np.cross(ori_to_puck, ori_me))
-            action = ctrl0.act(action, state.karts[0], puck_location,testing=True)
+            print("WE CAN SEE")
+            last_seen_side0 = np.sign(np.cross(ori_to_puck, ori_me))
+            action0 = ctrl0.act(action0, state.karts[0], puck_location=puck_location,last_seen_side=last_seen_side0,testing=True)
  
-        uis[0].current_action.steer = action["steer"]
-        uis[0].current_action.acceleration = action["acceleration"]
+        uis[0].current_action.steer = action0["steer"]
+        uis[0].current_action.acceleration = action0["acceleration"]
+        uis[0].current_action.brake = action0["brake"]
+        uis[0].current_action.fire = action0["fire"]
+        print(uis[0].current_action)
+        
+        if (len(state.karts)>=3 and len(uis)>=3):
+            pos_me1 = to_numpy(state.karts[0].location)*team_orientaion_multiplier
+            front_me1 = to_numpy(state.karts[2].front)*team_orientaion_multiplier
+            ori_me1 = get_vector_from_this_to_that(pos_me1, front_me1)
+            ori_to_puck1 = get_vector_from_this_to_that(pos_me1, puck_location)
+            action1 = {'acceleration': 0, 'brake': False, 'drift': False, 'nitro': False, 'rescue': False, 'steer': 0, 'fire': False}
+            turn_mag1 = abs(1 - np.dot(ori_me1, ori_to_puck1))
+            if (turn_mag1 >.4):
+                action1 = ctrl1.act(action1, state.karts[2],puck_location=None,last_seen_side=last_seen_side1, testing=True)
+            else:
+                print("WE CAN SEE")
+                last_seen_side1 = np.sign(np.cross(ori_to_puck, ori_me))
+                action1 = ctrl1.act(action1, state.karts[2], puck_location=puck_location,last_seen_side=last_seen_side1,testing=True)
+    
+            uis[2].current_action.steer = action1["steer"]
+            uis[2].current_action.acceleration = action1["acceleration"]
+            uis[2].current_action.brake = action1["brake"]
+            uis[2].current_action.fire = action1["fire"]
+
+
+        
+        #race.step(uis[0].current_action)
+        #state.update()
+        
 
         # Live plotting. Sorry it's ugly.
         ax.clear()
@@ -119,7 +162,7 @@ if __name__ == "__main__":
         ax.plot(pos_me[0], pos_me[1], 'r.')                 # Current player is a red dot.
         ax.plot(pos_ai[0], pos_ai[1], 'b.')                 # Enemy ai is a blue dot.
         ax.plot(puck_location[0], puck_location[1], 'co')             # The puck is a cyan circle.
-        ax.plot(puck_location[0], puck_location[1], 'kx')     # The target picked up is a black x.
+        ax.plot(puck_location[0], puck_location[1], 'kx')   # The target picked up is a black x.
 
         # Plot lines of where I am facing, and where the enemy is in relationship to me.
         ax.plot([pos_me[0], pos_me[0] + 10 * ori_me[0]], [pos_me[1], pos_me[1] + 10 * ori_me[1]], 'r-')
@@ -131,9 +174,16 @@ if __name__ == "__main__":
 
         # Properties of the karts. Overall useful to see what properties you have.
         # print(dir(state.karts[0]))
-
-        for ui, d in zip(uis, race.render_data):
-            ui.show(d)
+        print(len(race.render_data))
+        if (len(uis)>=3):
+            #for ui, d in zip(uis, race.render_data):
+            #    ui.show(d)
+            for ui, d in zip([uis[1],uis[2]], [race.render_data[1],race.render_data[2]]):
+                ui.show(d)
+        else:
+            for ui, d in zip(uis, race.render_data):
+                ui.show(d)
+        
 
         # Make sure we play in real time
         n += 1
