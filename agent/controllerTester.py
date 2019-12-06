@@ -43,6 +43,8 @@ if __name__ == "__main__":
     config.players[0].controller = pystk.PlayerConfig.Controller.PLAYER_CONTROL
     config.players[0].team = 0
     config.players.append(pystk.PlayerConfig("", pystk.PlayerConfig.Controller.AI_CONTROL, 1))
+    #config.players.append(pystk.PlayerConfig("", pystk.PlayerConfig.Controller.PLAYER_CONTROL, 0))
+    #config.players.append(pystk.PlayerConfig("", pystk.PlayerConfig.Controller.AI_CONTROL, 1))
 
     race = pystk.Race(config)
     race.start()
@@ -61,13 +63,12 @@ if __name__ == "__main__":
     
     team_orientaion_multiplier = -2*(config.players[0].team %2)+1
     ctrl0 = Controller1(team_orientaion_multiplier,0)
-    
+    last_seen_side= None
+    goal = np.array([0.0,64.5])
     while all(ui.visible for ui in uis):
         if not all(ui.pause for ui in uis):
             race.step(uis[0].current_action)
             state.update()
-            
-        
             
 
         puck_location = to_numpy(state.soccer.ball.location) # We need to get this from NN output
@@ -91,16 +92,22 @@ if __name__ == "__main__":
         ori_me = get_vector_from_this_to_that(pos_me, front_me)
         ori_to_ai = get_vector_from_this_to_that(pos_me, pos_ai)
         ori_to_puck = get_vector_from_this_to_that(pos_me, puck_location)
+        ori_puck_to_goal = get_vector_from_this_to_that(puck_location, goal)
+        #print("ori_puck_to_goal",ori_puck_to_goal)
+        
+        #otp = get_vector_from_this_to_that(pos_me, puck_location,normalize=False)
+        #print("ori_to_puck",otp,np.linalg.norm(otp))
 
 
         # set actions
         action = {'acceleration': 0, 'brake': False, 'drift': False, 'nitro': False, 'rescue': False, 'steer': 0}
         turn_mag = abs(1 - np.dot(ori_me, ori_to_puck))
         if (turn_mag >.4):
-            action = ctrl0.act(action, state.karts[0], None,testing=True)
+            action = ctrl0.act(action, state.karts[0],last_seen_side=last_seen_side, testing=True)
         else:
+            last_seen_side = np.sign(np.cross(ori_to_puck, ori_me))
             action = ctrl0.act(action, state.karts[0], puck_location,testing=True)
-
+ 
         uis[0].current_action.steer = action["steer"]
         uis[0].current_action.acceleration = action["acceleration"]
 
@@ -117,6 +124,7 @@ if __name__ == "__main__":
         # Plot lines of where I am facing, and where the enemy is in relationship to me.
         ax.plot([pos_me[0], pos_me[0] + 10 * ori_me[0]], [pos_me[1], pos_me[1] + 10 * ori_me[1]], 'r-')
         ax.plot([pos_me[0], pos_me[0] + 10 * ori_to_ai[0]], [pos_me[1], pos_me[1] + 10 * ori_to_ai[1]], 'b-')
+        ax.plot([puck_location[0], puck_location[0] + 10 * ori_puck_to_goal[0]], [puck_location[1], puck_location[1] + 10 * ori_puck_to_goal[1]], 'b-')
 
         # Live debugging of scalars. Angle in degrees to the target item.
         ax.set_title('%.2f' % (np.degrees(np.arccos(np.dot(ori_me, ori_to_puck)))))

@@ -64,7 +64,7 @@ class HockeyPlayer:
         action = {'acceleration': 0, 'brake': False, 'drift': False, 'nitro': False, 'rescue': False, 'steer': 0}
 
         # This returns the puck location if we can see the puck
-        # last_seen_side is: 0 is left, 1 is right
+        # last_seen_side is: -1 is left, 1 is right
         # puck_location is: None if we cant see the puck, [x, z]
         # self.team_orientaion_multiplier is a multiplier to any game position argument
 
