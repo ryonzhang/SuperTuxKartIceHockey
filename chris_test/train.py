@@ -34,18 +34,17 @@ def train(args):
 
     l1 = torch.nn.L1Loss()
 
-    scheduler = ReduceLROnPlateau(optimizer, mode='min', factor=0.1, patience=2, verbose=True)
+    scheduler = ReduceLROnPlateau(optimizer, mode='min', factor=args.factor, patience=args.patience, verbose=True)
 
     transform = list()
     transform = []
-    transform.append(dense_transforms.ColorJitter(0.9, 0.9, 0.9, 0.1))
     transform.append(dense_transforms.RandomHorizontalFlip())
     transform.append(dense_transforms.ToTensor())
     transform.append(dense_transforms.to_heatmap)
 
     transform = dense_transforms.Compose(transform)
 
-    train_data = load_detection_data('drive_data/0', num_workers=0, transform=transform)
+    train_data = load_detection_data('drive_data/0',batch_size=args.bs, num_workers=0, transform=transform)
 
     global_step = 0
     for epoch in range(args.num_epoch):
@@ -97,5 +96,8 @@ if __name__ == '__main__':
     parser.add_argument('-t', '--transform',
                         default='Compose([ColorJitter(0.9, 0.9, 0.9, 0.1), RandomHorizontalFlip(), ToTensor()])')
 
+    parser.add_argument('-bs', type=int, default=32)
+    parser.add_argument('-patience', type=int, default=2)
+    parser.add_argument('-factor', type=float, default=0.1)
     args = parser.parse_args()
     train(args)
