@@ -1,6 +1,7 @@
 import pystk
 import numpy as np
 
+from . import gui
 
 class Player:
     def __init__(self, player, team=0):
@@ -28,7 +29,7 @@ class Tournament:
         pystk.init(self.graphics_config)
 
         self.race_config = pystk.RaceConfig(num_kart=len(players), track=track, mode=pystk.RaceConfig.RaceMode.SOCCER)
-        self.race_config.players.pop()
+        # self.race_config.players.pop()
         
         self.active_players = []
         for p in players:
@@ -40,6 +41,8 @@ class Tournament:
 
         self.k.start()
         self.k.step()
+
+        self.uis = [gui.UI([gui.VT['IMAGE']]) for i in range(len(players))]
 
     def play(self, save=None, max_frames=50):
         state = pystk.WorldState()
@@ -68,6 +71,10 @@ class Tournament:
 
                 if save is not None:
                     PIL.Image.fromarray(image).save(os.path.join(save, 'player%02d_%05d.png' % (i, t)))
+
+                self.uis[player.kart.player_id].show(self.k.render_data[player.kart.player_id])
+                # for ui, d in zip(uis, self.k.render_data):
+                    # ui.show(d)
 
             s = self.k.step(list_actions)
             if not s:  # Game over

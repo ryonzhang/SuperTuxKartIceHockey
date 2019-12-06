@@ -5,6 +5,7 @@ from .controller import Controller1
 from collections import deque
 import torch
 from torchvision.transforms import functional as F
+from .utils import WorldTools as wt
 
 
 class History:
@@ -23,6 +24,7 @@ class History:
         if (len(self.elements)!=0):
             return self.elements[-1]
         return self.default
+
 
 class HockeyPlayer:
     """
@@ -76,7 +78,10 @@ class HockeyPlayer:
         # puck_location_onscreen == None when the puck isn't on the screen
         # print(torch.Tensor(image).shape)
         puck_location_onscreen = self.model.detect(F.to_tensor(image))
-
+        print("IPAOJDIOPASASDLJASLKD:::: {}".format(puck_location_onscreen))
+        b, w, h = puck_location_onscreen
+        print(w.item())
+        wt.screen_puck_to_world_puck[w.item(), h.item()]
         action = self.controller.act(action, player_info, puck_location_onscreen)
         HockeyPlayer.messages.append("") # information to be shared among HockeyPlayer class, basically our players.
 

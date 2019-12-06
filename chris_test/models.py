@@ -134,6 +134,37 @@ class Detector(torch.nn.Module):
 
         return found_puck, x, y
 
+class LinearClassifier(torch.nn.Module):
+    def __init__(self):
+        super().__init__()
+
+        """
+        Your code here
+        """
+        self.network = torch.nn.Linear(2 * 400 * 300, 2)
+
+    def forward(self, x):
+        """
+        Your code here
+
+        @x: torch.Tensor((B,3,64,64))
+        @return: torch.Tensor((B,6))
+        """
+        return self.network(x.view(x.size(0), -1))
+
+class Controller(torch.nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.network = torch.nn.Linear(2, 2, bias=False)
+    
+    def forward(self, x):
+        return self.network(x)
+
+    # def act(self, aim_point):
+    #     x = torch.as_tensor(aim_point.astype(np.float32))
+    #     p = self.forward(x[None])[0]
+    #     return pystk.Action(steer=p[0], acceleration=1)
+
 def save_model(model):
     from torch import save
     from os import path
