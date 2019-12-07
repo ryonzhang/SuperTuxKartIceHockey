@@ -127,9 +127,10 @@ if __name__ == "__main__":
 
         # Properties of the karts. Overall useful to see what properties you have.
         # print(dir(state.karts[0]))
-
-        for ui, d in zip(uis, race.render_data):
-            ui.show(d)
+        
+        # step 2 viz
+        # for ui, d in zip(uis, race.render_data):
+        #     ui.show(d)
 
         # Make sure we play in real time
         n += 1

@@ -3,6 +3,8 @@ from chris_test.models import Detector, load_model
 from .controller import Controller1
 from collections import deque
 from torchvision.transforms import functional as F
+
+DEBUG = False
 class HockeyPlayer:
     """
        Your ice hockey player. You may do whatever you want here. There are three rules:

@@ -2,6 +2,7 @@ import torch
 import torch.nn.functional as F
 import numpy as np
 
+DEBUG = False
 
 def extract_peak(heatmap, max_pool_ks=7, min_score=-1, max_det=1):
     """
@@ -149,7 +150,8 @@ class Detector(torch.nn.Module):
         # return none as world position if not on screen; calculate world position from player position and onscreen position otherwise
         if (found_puck):
             worldPos = to_numpy(screen_puck_to_world_puck([x.item(), y.item()], np.transpose(player_info.camera.projection), np.transpose(player_info.camera.view)))
-            print("PUCK WORLD LOCATIONNNNNNNN{}".format(worldPos))
+            if DEBUG:
+                print("PUCK WORLD LOCATIONNNNNNNN{}".format(worldPos))
         else:
             worldPos = None
 

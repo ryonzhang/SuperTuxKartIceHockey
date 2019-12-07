@@ -1,6 +1,6 @@
 import numpy as np
 import torch
-
+DEBUG = False
 
 class History:
     def __init__(self, max_history_length, default):
@@ -98,7 +98,8 @@ class Controller1:
         kart_vel = np.dot(to_numpy(player_info.kart.velocity)*self.team_orientaion_multiplier,ori_me)
         if kart_vel < 0:
             backing_turn_multiplier = -1.
-        print("kart_vel",kart_vel)
+        if DEBUG:
+            print("kart_vel",kart_vel)
 
         # determine if we are  in a new round
         if (kart_vel == 0 and abs(np.linalg.norm(self.last_world_pos-pos_me))>5):
@@ -110,7 +111,8 @@ class Controller1:
             ori_to_goalKeepLoc = get_vector_from_this_to_that(pos_me, self.goalKeepLoc,normalize=False)
             ori_to_goalKeepLoc_n = get_vector_from_this_to_that(pos_me, self.goalKeepLoc)
             to_goalKeepLoc_mag = np.linalg.norm(ori_to_goalKeepLoc)
-            print("goalie_mag", to_goalKeepLoc_mag)
+            if DEBUG:
+                print("goalie_mag", to_goalKeepLoc_mag)
             if puck_location is not None and (puck_location[1]<-24.5): # puck is in our third, Attack!
                 self.his.push(puck_location)
                 ori_to_puck = get_vector_from_this_to_that(pos_me, puck_location,normalize=False)
@@ -124,7 +126,8 @@ class Controller1:
                 _his = self.his.peek(2)
                 if len(_his)==2 and get_vector_from_this_to_that(_his[0],_his[1],normalize=False)[1]<-1:
                     dif = get_vector_from_this_to_that(_his[0],_his[1],normalize=False)
-                    print("dif",dif)
+                    if DEBUG:
+                        print("dif",dif)
                     pos_hit_loc = puck_location + 2*dif
                 else:
                     pos_hit_loc = puck_location-.5*ori_puck_to_goal_n
@@ -133,9 +136,11 @@ class Controller1:
                 turn_mag = abs(1 - np.dot(ori_me, ori_to_puck_n))
                 if turn_mag > 1e-25:
                     action["steer"] = np.sign(np.cross(ori_to_puck_n, ori_me))*turn_mag*50000*backing_turn_multiplier
-                print("trying to switch",abs(angle_between(ori_to_puck,ori_me)) < .8, puck_location[1]>-35, np.linalg.norm(ori_to_puck)<15,np.linalg.norm(ori_to_puck))
+                if DEBUG:
+                    print("trying to switch",abs(angle_between(ori_to_puck,ori_me)) < .8, puck_location[1]>-35, np.linalg.norm(ori_to_puck)<15,np.linalg.norm(ori_to_puck))
                 if (abs(angle_between(ori_to_puck,ori_me)) < .8 and puck_location[1]>-35 and np.linalg.norm(ori_to_puck)<15): #switch rolls
-                    print("SWITCHING",Controller1.goalieID)
+                    if DEBUG:
+                        print("SWITCHING",Controller1.goalieID)
                     Controller1.goalieID = Controller1.goalieID+1%2
             elif (to_goalKeepLoc_mag>2): #Goalie isnt at goal keeper location
                 if np.dot(ori_to_goalKeepLoc,ori_me)<0:
@@ -159,7 +164,8 @@ class Controller1:
                     turn_mag = abs(1 - np.dot(ori_me, ori_to_puck_n))
                     
                     if turn_mag > .0005:
-                        print("turn_mag",turn_mag)
+                        if DEBUG:
+                            print("turn_mag",turn_mag)
                         if np.dot(ori_to_goalKeepLoc,ori_me)<0:
                             action["brake"] = 1.
                             action["acceleration"] = 0.0
@@ -168,7 +174,8 @@ class Controller1:
                         action["steer"] = np.sign(np.cross(ori_to_puck_n, ori_me))*turn_mag*5000*backing_turn_multiplier
         
                 else: # Doesn't have vision of puck
-                    print("last_seen_side",last_seen_side)
+                    if DEBUG:
+                        print("last_seen_side",last_seen_side)
                     action["brake"] = 1.
                     action["acceleration"] = 0.0
                     action["steer"] = backing_turn_multiplier*last_seen_side
@@ -188,13 +195,15 @@ class Controller1:
                     action["acceleration"] = 1
                     if (to_puck_mag>80):# really far
                         action["acceleration"] = .8
-                    print("not close to puck")
+                    if DEBUG:
+                        print("not close to puck")
                     turn_mag = abs(1 - np.dot(ori_me, ori_to_puck_n))
                     #print(turn_mag)
                     if turn_mag > 1e-25:
                         action["steer"] = np.sign(np.cross(ori_to_puck_n, ori_me))*turn_mag*5000*backing_turn_multiplier
                 else: # close to puck
-                    print("close to puck")
+                    if DEBUG:
+                        print("close to puck")
                     #ab_player_puck = angle_between(ori_to_puck,ori_me)
 
                     action["acceleration"] = .8
@@ -207,7 +216,8 @@ class Controller1:
                         action["steer"] = np.sign(np.cross(ori_to_puck_n, ori_me))*turn_mag*5000*backing_turn_multiplier
 
             else: # Doesn't have vision of puck
-                print("last_seen_side",last_seen_side)
+                if DEBUG:
+                    print("last_seen_side",last_seen_side)
                 action["brake"] = 1.
                 action["acceleration"] = 0.0
                 action["steer"] = backing_turn_multiplier*last_seen_side

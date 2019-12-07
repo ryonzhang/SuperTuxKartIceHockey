@@ -41,7 +41,9 @@ class Tournament:
 
         self.k.start()
         self.k.step()
-        self.uis = [gui.UI([gui.VT['IMAGE']]) for i in range(len(players))]
+
+        # step 1 viz
+        # self.uis = [gui.UI([gui.VT['IMAGE']]) for i in range(len(players))]
 
     def play(self, save=None, max_frames=50):
         state = pystk.WorldState()
@@ -76,8 +78,9 @@ class Tournament:
             s = self.k.step(list_actions)
             if not s:  # Game over
                 break
-            for ui, d in zip(self.uis, self.k.render_data):
-                ui.show(d)
+            # step 2 viz
+            # for ui, d in zip(self.uis, self.k.render_data):
+            #     ui.show(d)
         if save is not None:
             import subprocess
             for i, p in enumerate(self.active_players):
