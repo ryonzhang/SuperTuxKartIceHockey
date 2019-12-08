@@ -62,7 +62,7 @@ def angle_between(v1, v2):
     return np.arccos(np.clip(np.dot(v1_u, v2_u), -1.0, 1.0))
 
 class Controller1:
-    goalieID=1.
+    goalieID=0.
     
 
     def __init__(self, team_orientaion_multiplier, player_id):
@@ -76,12 +76,13 @@ class Controller1:
         self.attempted_to_fire = False
         self.his = History(max_history_length = 10, default = np.array([0.0,0.0]))
         self.last_world_pos = np.array([0.0,-64.5])
+
+        self.backupCounter = -1
      
     def act(self, action, player_info, puck_location=None, last_seen_side=None, testing=False):
         # Fire every other frame
         action["fire"]= self.attempted_to_fire 
         self.attempted_to_fire = not self.attempted_to_fire
-
             
         if testing:
             # Get world positions
@@ -114,6 +115,7 @@ class Controller1:
         self.last_world_pos = pos_me
             
         if (Controller1.goalieID==self.player_id): # I'm goalie
+            self.backupCounter = -1
             ori_to_goalKeepLoc = get_vector_from_this_to_that(pos_me, self.goalKeepLoc,normalize=False)
             ori_to_goalKeepLoc_n = get_vector_from_this_to_that(pos_me, self.goalKeepLoc)
             to_goalKeepLoc_mag = np.linalg.norm(ori_to_goalKeepLoc)
@@ -146,7 +148,7 @@ class Controller1:
                 if (abs(angle_between(ori_to_puck,ori_me)) < .8 and puck_location[1]>-35 and np.linalg.norm(ori_to_puck)<15): #switch rolls
                     if DEBUG:
                         print("SWITCHING",Controller1.goalieID)
-                    Controller1.goalieID = Controller1.goalieID+1%2
+                    Controller1.goalieID = (Controller1.goalieID+1)%2
             elif (to_goalKeepLoc_mag>2): #Goalie isnt at goal keeper location
                 if DEBUG:
                     print("Goalie is'nt at position")
@@ -194,6 +196,7 @@ class Controller1:
             if DEBUG:
                 print("Striker")
             if puck_location is not None:
+                self.backupCounter = -1
                 ori_to_puck = get_vector_from_this_to_that(pos_me, puck_location,normalize=False)
                 ori_to_puck_n = get_vector_from_this_to_that(pos_me, puck_location)
                 ori_puck_to_goal = get_vector_from_this_to_that(puck_location, self.goal,normalize=False)
@@ -230,6 +233,11 @@ class Controller1:
             else: # Doesn't have vision of puck
                 if DEBUG:
                     print("last_seen_side",last_seen_side)
+                if self.backupCounter == -1:
+                    self.backupCounter = 20
+                elif self.backupCounter == 0:
+                    action["rescue"] = True
+                self.backupCounter -= 1
                 action["brake"] = 1.
                 action["acceleration"] = 0.0
                 action["steer"] = backing_turn_multiplier*last_seen_side

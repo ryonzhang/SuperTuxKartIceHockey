@@ -127,6 +127,7 @@ if __name__ == "__main__":
         uis[0].current_action.acceleration = action0["acceleration"]
         uis[0].current_action.brake = action0["brake"]
         uis[0].current_action.fire = action0["fire"]
+        uis[0].current_action.rescue = action0["rescue"]
         print(uis[0].current_action)
         
         if (len(state.karts)>=3 and len(uis)>=3):
