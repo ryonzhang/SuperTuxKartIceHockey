@@ -140,10 +140,13 @@ class Detector(torch.nn.Module):
             found_puck = True
             x = peaks[0][0]
             y = peaks[0][1]
-            if(x<200):
+            if(x<150):
                 lastPos = -1
+            elif(x>250):
+                lastPos = 1
             else:
-                 lastPos = 1
+                lastPos = 0
+
         else:
             found_puck = False
 
@@ -157,7 +160,7 @@ class Detector(torch.nn.Module):
 
         return lastPos, worldPos
 
-lastPos = -1
+lastPos = 0
 
 def to_numpy(location):
     return np.float32([location[0], location[2]])

@@ -14,12 +14,14 @@ class History:
         else:
             del self.elements[0]
             self.elements.append(e)
-    def peek(self, N=1):
+    
+    def peekN(self, N=1):
         if (len(self.elements)>=N):
             return self.elements[-N:]
         elif (len(self.elements)!=0):
             return self.elements[:-1]
         return self.default
+
         
 
 
@@ -60,8 +62,7 @@ def angle_between(v1, v2):
     return np.arccos(np.clip(np.dot(v1_u, v2_u), -1.0, 1.0))
 
 class Controller1:
-    goalieID=0.
-
+    goalieID=1.
     
 
     def __init__(self, team_orientaion_multiplier, player_id):
@@ -80,22 +81,27 @@ class Controller1:
         # Fire every other frame
         action["fire"]= self.attempted_to_fire 
         self.attempted_to_fire = not self.attempted_to_fire
-        # Get world positions
-        if (testing and puck_location is not None):
-            #  Standardizing direction 2 elements
-            # [0] is negitive when facing left side of court (left of your goal), positive when right
-            # [1] is positive towards enemy goal, negitive when facing your goal
-            puck_location*=self.team_orientaion_multiplier
 
-        pos_me = to_numpy(player_info.kart.location)*self.team_orientaion_multiplier
+            
+        if testing:
+            # Get world positions
+            if (puck_location is not None):
+                #  Standardizing direction 2 elements
+                # [0] is negitive when facing left side of court (left of your goal), positive when right
+                # [1] is positive towards enemy goal, negitive when facing your goal
+                puck_location*=self.team_orientaion_multiplier
+            kart = player_info
+        else:
+            kart = player_info.kart
+        pos_me = to_numpy(kart.location)*self.team_orientaion_multiplier
         
         # Get kart vector
-        front_me = to_numpy(player_info.kart.front)*self.team_orientaion_multiplier
+        front_me = to_numpy(kart.front)*self.team_orientaion_multiplier
         ori_me = get_vector_from_this_to_that(pos_me, front_me)
 
         # Determine we are moving backwards
         backing_turn_multiplier = 1.
-        kart_vel = np.dot(to_numpy(player_info.kart.velocity)*self.team_orientaion_multiplier,ori_me)
+        kart_vel = np.dot(to_numpy(kart.velocity)*self.team_orientaion_multiplier,ori_me)
         if kart_vel < 0:
             backing_turn_multiplier = -1.
         if DEBUG:
@@ -120,10 +126,9 @@ class Controller1:
                 ori_puck_to_goal = get_vector_from_this_to_that(puck_location, self.goal,normalize=False)
                 ori_puck_to_goal_n = get_vector_from_this_to_that(puck_location, self.goal,normalize=True)
                 
-
                 action["acceleration"] = 1
 
-                _his = self.his.peek(2)
+                _his = self.his.peekN(2)
                 if len(_his)==2 and get_vector_from_this_to_that(_his[0],_his[1],normalize=False)[1]<-1:
                     dif = get_vector_from_this_to_that(_his[0],_his[1],normalize=False)
                     if DEBUG:
@@ -143,6 +148,8 @@ class Controller1:
                         print("SWITCHING",Controller1.goalieID)
                     Controller1.goalieID = Controller1.goalieID+1%2
             elif (to_goalKeepLoc_mag>2): #Goalie isnt at goal keeper location
+                if DEBUG:
+                    print("Goalie is'nt at position")
                 if np.dot(ori_to_goalKeepLoc,ori_me)<0:
                     action["brake"] = 1.
                     action["acceleration"] = 0.0
@@ -153,35 +160,40 @@ class Controller1:
                 if turn_mag > 1e-25:
                     action["steer"] = -1*np.sign(np.cross(ori_to_goalKeepLoc_n, ori_me))*turn_mag*5000*backing_turn_multiplier
             elif (to_goalKeepLoc_mag<8): # At goal keeper location
+                if DEBUG:
+                    print("Goalie is at position")
                 if kart_vel < 0:
                     action["acceleration"] = abs(kart_vel/10)
-                if puck_location is not None:
+                if puck_location is not None: # We can see the puck
                     self.his.push(puck_location)
-                    ori_to_puck = get_vector_from_this_to_that(pos_me, puck_location,normalize=False)
-                    ori_to_puck_n = get_vector_from_this_to_that(pos_me, puck_location)
-                    
-                    
-                    turn_mag = abs(1 - np.dot(ori_me, ori_to_puck_n))
-                    
-                    if turn_mag > .0005:
-                        if DEBUG:
-                            print("turn_mag",turn_mag)
-                        if np.dot(ori_to_goalKeepLoc,ori_me)<0:
-                            action["brake"] = 1.
-                            action["acceleration"] = 0.0
-                        else:
-                            action["acceleration"] = (abs(kart_vel)+.2)/4.5
-                        action["steer"] = np.sign(np.cross(ori_to_puck_n, ori_me))*turn_mag*5000*backing_turn_multiplier
+                else: # We can't see the puck
+                    puck_location = [0.,0.]
+                ori_to_puck = get_vector_from_this_to_that(pos_me, puck_location,normalize=False)
+                ori_to_puck_n = get_vector_from_this_to_that(pos_me, puck_location)
+                
+                
+                turn_mag = abs(1 - np.dot(ori_me, ori_to_puck_n))
+                
+                if turn_mag > .0005:
+                    if DEBUG:
+                        print("turn_mag",turn_mag)
+                    if np.dot(ori_to_goalKeepLoc,ori_me)<0:
+                        action["brake"] = 1.
+                        action["acceleration"] = 0.0
+                    else:
+                        action["acceleration"] = (abs(kart_vel)+.2)/4.5
+                    action["steer"] = np.sign(np.cross(ori_to_puck_n, ori_me))*turn_mag*5000*backing_turn_multiplier
         
-                else: # Doesn't have vision of puck
+                """else: # Doesn't have vision of puck
                     if DEBUG:
                         print("last_seen_side",last_seen_side)
                     action["brake"] = 1.
                     action["acceleration"] = 0.0
-                    action["steer"] = backing_turn_multiplier*last_seen_side
+                    #action["steer"] = backing_turn_multiplier*last_seen_side"""
         else: # I'm Striker
+            if DEBUG:
+                print("Striker")
             if puck_location is not None:
-
                 ori_to_puck = get_vector_from_this_to_that(pos_me, puck_location,normalize=False)
                 ori_to_puck_n = get_vector_from_this_to_that(pos_me, puck_location)
                 ori_puck_to_goal = get_vector_from_this_to_that(puck_location, self.goal,normalize=False)
