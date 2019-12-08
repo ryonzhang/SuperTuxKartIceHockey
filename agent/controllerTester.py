@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 
 from . import gui
 from .controller import Controller1
+from argparse import ArgumentParser
 
 
 def to_numpy(location):
@@ -28,6 +29,9 @@ def get_vector_from_this_to_that(me, obj, normalize=True):
 
 
 if __name__ == "__main__":
+    parser = ArgumentParser("Play some Ice Hockey. List any number of players, odd players are in team 1, even players team 2.")
+    parser.add_argument('--w', default=0, type=int, help="Who is the goalie?")
+    args = parser.parse_args()
     config = pystk.GraphicsConfig.hd()
     config.screen_width = 400
     config.screen_height = 300
@@ -62,7 +66,7 @@ if __name__ == "__main__":
     
     
     team_orientaion_multiplier = -2*(config.players[0].team %2)+1
-    ctrl0 = Controller1(team_orientaion_multiplier,0)
+    ctrl0 = Controller1(team_orientaion_multiplier,args.w)
     ctrl1 = Controller1(team_orientaion_multiplier,1)
     last_seen_side0 = None
     last_seen_side1 = None
