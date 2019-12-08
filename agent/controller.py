@@ -207,9 +207,9 @@ class Controller1:
                 #elif (pos_me[1]<-24.5): #our third
                 
                 if (to_puck_mag>20): # not close to puck
-                    action["acceleration"] = 1
+                    action["acceleration"] = .8
                     if (to_puck_mag>80):# really far
-                        action["acceleration"] = .8
+                        action["acceleration"] = .5
                     if DEBUG:
                         print("not close to puck")
                     turn_mag = abs(1 - np.dot(ori_me, ori_to_puck_n))
